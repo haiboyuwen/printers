@@ -1,0 +1,21 @@
+.github/workflows/deploy.yml
+  s_07f5fe8b4fed4b::t_38768d7af2fa76 1-32
+vite.config.ts
+  s_07f5fe8b4fed4b::t_c0d8cf59a9b485 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "d29c95f4f5b328cf765c2dcd7b9f9f118dd8d7d6",
+  "prompts": {},
+  "sessions": {
+    "s_07f5fe8b4fed4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb09d52c-336a-4d38-b9f3-6e762513a599",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "yuhaibo <haiboyuwen@gmail.com>"
+    }
+  }
+}

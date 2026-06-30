@@ -30,6 +30,7 @@ function getLocalPrinters(): string[] {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/printers/',
   define: {
     __PDFJS_VERSION__: JSON.stringify(PDFJS_VERSION),
   },

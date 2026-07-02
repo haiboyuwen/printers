@@ -4,6 +4,7 @@ import { Printer, ChevronDown } from 'lucide-react';
 import MarginsDialog from './MarginsDialog';
 
 const FALLBACK_PRINTERS: string[] = [];
+declare const __ENABLE_PRINTERS_API__: boolean;
 
 interface PrintSettingsPanelProps {
   settings: PrintSettings;
@@ -28,17 +29,29 @@ export default function PrintSettingsPanel({
 }: PrintSettingsPanelProps) {
   const [showMargins, setShowMargins] = useState(false);
   const [availablePrinters, setAvailablePrinters] = useState<string[]>(FALLBACK_PRINTERS);
-  const [printersLoading, setPrintersLoading] = useState(true);
+  const [printersLoading, setPrintersLoading] = useState(__ENABLE_PRINTERS_API__);
 
-  // Fetch locally configured printers via API
+  const update = (partial: Partial<PrintSettings>) => {
+    onChange({ ...settings, ...partial });
+  };
+
   useEffect(() => {
+    if (!__ENABLE_PRINTERS_API__) {
+      setPrintersLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     fetch('/api/printers', { signal: controller.signal })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to load printers: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data.printers && data.printers.length > 0) {
           setAvailablePrinters(data.printers);
-          // Auto-select first real printer if current selection is a fallback
           if (!data.printers.includes(settings.printer)) {
             update({ printer: data.printers[0] });
           }
@@ -50,10 +63,6 @@ export default function PrintSettingsPanel({
       .finally(() => setPrintersLoading(false));
     return () => controller.abort();
   }, []);
-
-  const update = (partial: Partial<PrintSettings>) => {
-    onChange({ ...settings, ...partial });
-  };
 
   return (
     <>
@@ -74,6 +83,9 @@ export default function PrintSettingsPanel({
                   className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white appearance-none cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   {printersLoading && <option value="">加载中...</option>}
+                  {!printersLoading && availablePrinters.length === 0 && (
+                    <option value="">系统打印对话框</option>
+                  )}
                   {!printersLoading && availablePrinters.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}

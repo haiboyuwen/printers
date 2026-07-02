@@ -404,6 +404,7 @@ export default function App() {
       addCutLine, autoCenter, autoRotate, copies, customScale,
       scaleMode, hideBackground, collate, printer,
     } = settings;
+    const printerLabel = printer || '系统打印对话框';
 
     const isLandscape = orientation === 'landscape';
     const paperDims: Record<string, { w: number; h: number }> = {
@@ -462,7 +463,7 @@ export default function App() {
       .cell img.rotate { transform: scale(${scale}) rotate(90deg); transform-origin: center center; }
     ` : '';
 
-    let html = `<!DOCTYPE html><html><head><title>打印发票 - ${printer}</title><style>
+    let html = `<!DOCTYPE html><html><head><title>打印发票 - ${printerLabel}</title><style>
       @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { ${grayscale ? 'filter: grayscale(100%);' : ''} }
@@ -508,7 +509,7 @@ export default function App() {
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.onload = () => {
-      setPrintStatus(`✅ 已生成打印任务：${toPrint.length} 张发票，${copies} 份，${printer}`);
+      setPrintStatus(`✅ 已生成打印任务：${toPrint.length} 张发票，${copies} 份，${printerLabel}`);
       setPrintStatusVisible(true);
       setTimeout(() => setPrintStatusVisible(false), 4000);
       setTimeout(() => printWindow.print(), 400);

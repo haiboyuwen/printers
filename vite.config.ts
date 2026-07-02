@@ -17,12 +17,16 @@ const PDFJS_VERSION = pdfjsPkg.version;
 
 function getLocalPrinters(): string[] {
   try {
-    const out = execSync("lpstat -a 2>/dev/null", { encoding: "utf8", timeout: 3000 });
-    const lines = out.trim().split("\n").filter(Boolean);
-    return lines.map((line) => {
-      const m = line.match(/^([a-zA-Z0-9_-]+)/);
-      return m ? m[1] : "";
-    }).filter(Boolean);
+    if (process.platform === "win32") {
+      const out = execSync(
+        'powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Printer | Select-Object -ExpandProperty Name"',
+        { encoding: "utf8", timeout: 3000 }
+      );
+      return out.trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    }
+
+    const out = execSync("lpstat -e 2>/dev/null", { encoding: "utf8", timeout: 3000 });
+    return out.trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   } catch {
     return [];
   }
@@ -33,6 +37,7 @@ export default defineConfig({
   base: '/printers/',
   define: {
     __PDFJS_VERSION__: JSON.stringify(PDFJS_VERSION),
+    __ENABLE_PRINTERS_API__: JSON.stringify(process.env.NODE_ENV !== "production"),
   },
   plugins: [
     react(),

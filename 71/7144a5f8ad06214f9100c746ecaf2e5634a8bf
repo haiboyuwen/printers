@@ -1,0 +1,26 @@
+src/App.tsx
+  s_393d5178b1b278::t_bff8ffb91fd8a8 407,466,512
+vite.config.ts
+  s_393d5178b1b278::t_bce27dbef33b0f 28-29
+  s_393d5178b1b278::t_7c1f3b667e752b 20-27,40
+dist/index.html
+  s_393d5178b1b278::t_6cdd3d6fc83588 7,9,14-19,21,25-30,34,38-39,52-54,56-59
+src/components/PrintSettingsPanel.tsx
+  s_393d5178b1b278::t_b14d27c62a587c 7,32-36,39-43,46-51,86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "717144a5f8ad06214f9100c746ecaf2e5634a8bf",
+  "prompts": {},
+  "sessions": {
+    "s_393d5178b1b278": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f20ab-0052-7591-9298-e7016e381178",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yuhaibo <haiboyuwen@gmail.com>"
+    }
+  }
+}

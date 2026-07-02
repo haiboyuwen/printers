@@ -1,0 +1,22 @@
+src/components/InvoiceListView.tsx
+  s_393d5178b1b278::t_878f9a7c0faefa 162-178,204,215,277-301
+  s_393d5178b1b278::t_94030d9a831444 302
+dist/index.html
+  s_393d5178b1b278::t_4fabb3f9a39661 7,9-10,12,14-19,21,24-29,31,44,52-53,58,60,67,70,73-75,77,79-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "7210be1abbd47d52baf4a5b7275899f735a8beea",
+  "prompts": {},
+  "sessions": {
+    "s_393d5178b1b278": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f20ab-0052-7591-9298-e7016e381178",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yuhaibo <haiboyuwen@gmail.com>"
+    }
+  }
+}

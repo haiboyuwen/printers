@@ -1,0 +1,19 @@
+dist/index.html
+  s_393d5178b1b278::t_46da8dd0236e68 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "9ba4ae7dab153884855e16437ee9e7f5272658b6",
+  "prompts": {},
+  "sessions": {
+    "s_393d5178b1b278": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f20ab-0052-7591-9298-e7016e381178",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yuhaibo <haiboyuwen@gmail.com>"
+    }
+  }
+}

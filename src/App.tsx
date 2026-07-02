@@ -405,6 +405,14 @@ export default function App() {
       scaleMode, hideBackground, collate, printer,
     } = settings;
     const printerLabel = printer || '系统打印对话框';
+    const escapeHtml = (value: string) =>
+      value.replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]!));
 
     const isLandscape = orientation === 'landscape';
     const paperDims: Record<string, { w: number; h: number }> = {
@@ -463,10 +471,25 @@ export default function App() {
       .cell img.rotate { transform: scale(${scale}) rotate(90deg); transform-origin: center center; }
     ` : '';
 
-    let html = `<!DOCTYPE html><html><head><title>打印发票 - ${printerLabel}</title><style>
+    let html = `<!DOCTYPE html><html><head><title>打印发票 - ${escapeHtml(printerLabel)}</title><style>
       @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { ${grayscale ? 'filter: grayscale(100%);' : ''} }
+      body {
+        ${grayscale ? 'filter: grayscale(100%);' : ''}
+        background: #f8fafc;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .print-status {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #334155;
+        font-size: 14px;
+        background: #f8fafc;
+        z-index: 9999;
+      }
       .sheet {
         width: ${pageW}mm; height: ${pageH}mm;
         padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
@@ -491,7 +514,11 @@ export default function App() {
         ${scaleMode === 'actual' ? 'width: auto; height: auto;' : `object-fit: contain; transform: scale(${scale}); transform-origin: center center;`}
       }
       ${rotateCSS}
-    </style></head><body>`;
+      @media print {
+        body { background: white; }
+        .print-status { display: none; }
+      }
+    </style></head><body><div id="print-status" class="print-status">正在准备打印内容...</div>`;
 
     for (const sheet of orderedSheets) {
       html += `<div class="sheet">`;
@@ -505,15 +532,68 @@ export default function App() {
       html += `</div>`;
     }
 
-    html += `</body></html>`;
+    html += `<script>
+      (function () {
+        var didPrint = false;
+        var fallbackTimer = null;
+
+        function updateStatus(text) {
+          var status = document.getElementById('print-status');
+          if (status) status.textContent = text;
+        }
+
+        function beginPrint() {
+          if (didPrint) return;
+          didPrint = true;
+          if (fallbackTimer) window.clearTimeout(fallbackTimer);
+          updateStatus('正在打开打印对话框...');
+          window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+              window.focus();
+              window.print();
+            });
+          });
+        }
+
+        function waitForImages() {
+          var images = Array.prototype.slice.call(document.images);
+          if (images.length === 0) {
+            beginPrint();
+            return;
+          }
+
+          var remaining = images.length;
+          function markDone() {
+            remaining -= 1;
+            updateStatus('正在准备打印内容... ' + (images.length - remaining) + '/' + images.length);
+            if (remaining <= 0) beginPrint();
+          }
+
+          images.forEach(function (img) {
+            if (img.complete) {
+              markDone();
+              return;
+            }
+            img.addEventListener('load', markDone, { once: true });
+            img.addEventListener('error', markDone, { once: true });
+          });
+
+          fallbackTimer = window.setTimeout(beginPrint, 10000);
+        }
+
+        if (document.readyState === 'complete') {
+          waitForImages();
+        } else {
+          window.addEventListener('load', waitForImages, { once: true });
+        }
+      })();
+    </script></body></html>`;
+    setPrintStatus(`正在准备打印任务：${toPrint.length} 张发票，${copies} 份，${printerLabel}`);
+    setPrintStatusVisible(true);
+    printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.onload = () => {
-      setPrintStatus(`✅ 已生成打印任务：${toPrint.length} 张发票，${copies} 份，${printerLabel}`);
-      setPrintStatusVisible(true);
-      setTimeout(() => setPrintStatusVisible(false), 4000);
-      setTimeout(() => printWindow.print(), 400);
-    };
+    setTimeout(() => setPrintStatusVisible(false), 4000);
   }, [invoices, settings]);
 
   return (

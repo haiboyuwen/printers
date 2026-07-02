@@ -159,6 +159,23 @@ interface TreeNode {
   invoices: InvoiceFile[];
 }
 
+const SIDEBAR_MIN_WIDTH = 190;
+const SIDEBAR_MAX_WIDTH = 320;
+
+function clampSidebarWidth(width: number) {
+  return Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width));
+}
+
+function estimateTextWidth(text: string) {
+  return Array.from(text).reduce((sum, char) => {
+    const code = char.charCodeAt(0);
+    if (code > 0x2e80) return sum + 14;
+    if (/[A-Z0-9]/.test(char)) return sum + 8;
+    if (/[il.,:;|]/.test(char)) return sum + 4;
+    return sum + 7;
+  }, 0);
+}
+
 export default function InvoiceListView({
   invoices,
   settings,
@@ -184,10 +201,7 @@ export default function InvoiceListView({
   const [folderDisplayNames, setFolderDisplayNames] = useState<Record<string, string>>({});
 
   // Sidebar resize state
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    try { return parseInt(localStorage.getItem('sidebarWidth') || '220', 10); }
-    catch { return 220; }
-  });
+  const [sidebarWidthOverride, setSidebarWidthOverride] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -198,7 +212,7 @@ export default function InvoiceListView({
   useEffect(() => {
     if (!isDragging) return;
     const handleMove = (e: MouseEvent) => {
-      setSidebarWidth(Math.max(150, Math.min(400, e.clientX)));
+      setSidebarWidthOverride(clampSidebarWidth(e.clientX));
     };
     const handleUp = () => setIsDragging(false);
     document.addEventListener('mousemove', handleMove);
@@ -222,10 +236,6 @@ export default function InvoiceListView({
       document.body.style.userSelect = '';
     };
   }, [isDragging]);
-
-  useEffect(() => {
-    localStorage.setItem('sidebarWidth', String(sidebarWidth));
-  }, [sidebarWidth]);
 
   // Build recursive folder tree from webkitRelativePath
   const treeRoot = useMemo(() => {
@@ -263,6 +273,32 @@ export default function InvoiceListView({
 
     return { nodes, singleFiles };
   }, [invoices]);
+
+  const autoSidebarWidth = useMemo(() => {
+    let width = SIDEBAR_MIN_WIDTH;
+
+    for (const inv of treeRoot.singleFiles) {
+      const amountWidth = inv.totalAmount > 0 ? estimateTextWidth(`¥${inv.totalAmount.toFixed(2)}`) : 12;
+      width = Math.max(width, estimateTextWidth(inv.fileName) + amountWidth + 86);
+    }
+
+    const measureNode = (node: TreeNode) => {
+      const displayName = folderDisplayNames[node.path] || node.label;
+      const totalAmt = node.invoices.reduce((s, inv) => s + inv.totalAmount, 0);
+      const meta = node.invoices.length > 0 ? `¥${totalAmt.toFixed(2)}/${node.invoices.length}` : '';
+      width = Math.max(width, estimateTextWidth(displayName) + estimateTextWidth(meta) + node.depth * 12 + 118);
+      node.invoices.forEach((inv) => {
+        const amountWidth = inv.totalAmount > 0 ? estimateTextWidth(`¥${inv.totalAmount.toFixed(2)}`) : 12;
+        width = Math.max(width, estimateTextWidth(inv.fileName) + amountWidth + node.depth * 12 + 98);
+      });
+      node.children.forEach(measureNode);
+    };
+
+    treeRoot.nodes.forEach(measureNode);
+    return clampSidebarWidth(Math.ceil(width));
+  }, [folderDisplayNames, treeRoot]);
+
+  const sidebarWidth = sidebarWidthOverride ?? autoSidebarWidth;
 
   const getInvoiceIndex = (invId: string): number => invoices.findIndex((i) => i.id === invId);
 

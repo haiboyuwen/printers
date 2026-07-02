@@ -463,28 +463,22 @@ export default function InvoiceListView({
         <div
           className="flex items-center gap-1 w-full px-1 py-1.5 text-xs font-medium text-gray-600 rounded transition-colors"
         >
-          {/* Toggle triangle */}
-          {collapsible ? (
-            <svg
-              onClick={() => togglePath(node.path)}
-              className={`w-3 h-3 shrink-0 cursor-pointer transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          ) : (
-            <span className="w-3 shrink-0" />
-          )}
-
           {/* Folder icon */}
-          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+          <svg
+            onClick={() => { if (collapsible) togglePath(node.path); }}
+            className={`w-3.5 h-3.5 shrink-0 ${collapsible ? 'cursor-pointer' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
 
           {/* Folder name */}
           <span
             onClick={() => { if (collapsible) togglePath(node.path); }}
-            className="flex-1 min-w-0 cursor-pointer truncate hover:text-blue-700"
+            className="flex-1 min-w-0 cursor-pointer break-all leading-tight hover:text-blue-700"
           >
             {displayName}
           </span>

@@ -391,14 +391,6 @@ export default function App() {
     const toPrint = invoices.filter((inv) => inv.selected);
     if (toPrint.length === 0) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      setPrintStatus('⚠️ 浏览器弹窗被拦截，请允许弹出窗口后重试');
-      setPrintStatusVisible(true);
-      setTimeout(() => setPrintStatusVisible(false), 4000);
-      return;
-    }
-
     const {
       orientation, paperSize, margins, grayscale, layout,
       addCutLine, autoCenter, autoRotate, copies, customScale,
@@ -468,58 +460,75 @@ export default function App() {
     }
 
     const rotateCSS = autoRotate ? `
-      .cell img.rotate { transform: scale(${scale}) rotate(90deg); transform-origin: center center; }
+      #print-root .cell img.rotate { transform: scale(${scale}) rotate(90deg); transform-origin: center center; }
     ` : '';
 
-    let html = `<!DOCTYPE html><html><head><title>打印发票 - ${escapeHtml(printerLabel)}</title><style>
-      @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body {
-        ${grayscale ? 'filter: grayscale(100%);' : ''}
-        background: #f8fafc;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      .print-status {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #334155;
-        font-size: 14px;
-        background: #f8fafc;
-        z-index: 9999;
-      }
-      .sheet {
-        width: ${pageW}mm; height: ${pageH}mm;
-        padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
-        page-break-after: always;
-        display: grid;
-        grid-template-columns: repeat(${cols}, 1fr);
-        grid-template-rows: repeat(${rows}, 1fr);
-        gap: 0;
-        ${hideBackground ? 'background: white;' : ''}
-      }
-      .sheet:last-child { page-break-after: auto; }
-      .cell {
-        display: flex;
-        ${autoCenter ? 'align-items: center; justify-content: center;' : ''}
-        overflow: hidden;
-        position: relative;
-        ${addCutLine ? 'border: 0.5px dashed #bbb;' : ''}
-      }
-      .cell img {
-        max-width: ${cellW}mm;
-        max-height: ${cellH}mm;
-        ${scaleMode === 'actual' ? 'width: auto; height: auto;' : `object-fit: contain; transform: scale(${scale}); transform-origin: center center;`}
-      }
-      ${rotateCSS}
-      @media print {
-        body { background: white; }
-        .print-status { display: none; }
-      }
-    </style></head><body><div id="print-status" class="print-status">正在准备打印内容...</div>`;
+    const oldPrintRoot = document.getElementById('print-root');
+    const oldPrintStyle = document.getElementById('print-style');
+    oldPrintRoot?.remove();
+    oldPrintStyle?.remove();
 
+    const printStyle = document.createElement('style');
+    printStyle.id = 'print-style';
+    printStyle.textContent = `
+      #print-root { display: none; }
+      @page { size: ${pageW}mm ${pageH}mm; margin: 0; }
+      @media print {
+        html, body {
+          width: auto !important;
+          height: auto !important;
+          overflow: visible !important;
+          background: white !important;
+        }
+        body > :not(#print-root) {
+          display: none !important;
+        }
+        #print-root {
+          display: block !important;
+          ${grayscale ? 'filter: grayscale(100%);' : ''}
+        }
+        #print-root, #print-root * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        #print-root .sheet {
+          width: ${pageW}mm;
+          height: ${pageH}mm;
+          padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
+          page-break-after: always;
+          display: grid;
+          grid-template-columns: repeat(${cols}, 1fr);
+          grid-template-rows: repeat(${rows}, 1fr);
+          gap: 0;
+          ${hideBackground ? 'background: white;' : ''}
+        }
+        #print-root .sheet:last-child {
+          page-break-after: auto;
+        }
+        #print-root .cell {
+          display: flex;
+          ${autoCenter ? 'align-items: center; justify-content: center;' : ''}
+          overflow: hidden;
+          position: relative;
+          ${addCutLine ? 'border: 0.5px dashed #bbb;' : ''}
+        }
+        #print-root .cell img {
+          max-width: ${cellW}mm;
+          max-height: ${cellH}mm;
+          ${scaleMode === 'actual' ? 'width: auto; height: auto;' : `object-fit: contain; transform: scale(${scale}); transform-origin: center center;`}
+        }
+        ${rotateCSS}
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    const printRoot = document.createElement('div');
+    printRoot.id = 'print-root';
+    printRoot.setAttribute('aria-hidden', 'true');
+    printRoot.setAttribute('data-printer', escapeHtml(printerLabel));
+
+    let html = '';
     for (const sheet of orderedSheets) {
       html += `<div class="sheet">`;
       for (let idx = 0; idx < perSheet; idx++) {
@@ -532,68 +541,44 @@ export default function App() {
       html += `</div>`;
     }
 
-    html += `<script>
-      (function () {
-        var didPrint = false;
-        var fallbackTimer = null;
+    printRoot.innerHTML = html;
+    document.body.appendChild(printRoot);
 
-        function updateStatus(text) {
-          var status = document.getElementById('print-status');
-          if (status) status.textContent = text;
-        }
+    const cleanupPrintDom = () => {
+      printRoot.remove();
+      printStyle.remove();
+      window.removeEventListener('afterprint', cleanupPrintDom);
+    };
 
-        function beginPrint() {
-          if (didPrint) return;
-          didPrint = true;
-          if (fallbackTimer) window.clearTimeout(fallbackTimer);
-          updateStatus('正在打开打印对话框...');
-          window.requestAnimationFrame(function () {
-            window.requestAnimationFrame(function () {
-              window.focus();
-              window.print();
-            });
-          });
-        }
+    const printImages = Array.from(printRoot.querySelectorAll('img'));
+    const imageReady = (img: HTMLImageElement) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.addEventListener('load', () => resolve(), { once: true });
+        img.addEventListener('error', () => resolve(), { once: true });
+      });
+    };
 
-        function waitForImages() {
-          var images = Array.prototype.slice.call(document.images);
-          if (images.length === 0) {
-            beginPrint();
-            return;
-          }
-
-          var remaining = images.length;
-          function markDone() {
-            remaining -= 1;
-            updateStatus('正在准备打印内容... ' + (images.length - remaining) + '/' + images.length);
-            if (remaining <= 0) beginPrint();
-          }
-
-          images.forEach(function (img) {
-            if (img.complete) {
-              markDone();
-              return;
-            }
-            img.addEventListener('load', markDone, { once: true });
-            img.addEventListener('error', markDone, { once: true });
-          });
-
-          fallbackTimer = window.setTimeout(beginPrint, 10000);
-        }
-
-        if (document.readyState === 'complete') {
-          waitForImages();
-        } else {
-          window.addEventListener('load', waitForImages, { once: true });
-        }
-      })();
-    </script></body></html>`;
     setPrintStatus(`正在准备打印任务：${toPrint.length} 张发票，${copies} 份，${printerLabel}`);
     setPrintStatusVisible(true);
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => setPrintStatusVisible(false), 4000);
+    window.addEventListener('afterprint', cleanupPrintDom);
+
+    Promise.race([
+      Promise.all(printImages.map(imageReady)),
+      new Promise((resolve) => window.setTimeout(resolve, 10000)),
+    ]).then(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setPrintStatus(`✅ 已生成打印任务：${toPrint.length} 张发票，${copies} 份，${printerLabel}`);
+          setTimeout(() => setPrintStatusVisible(false), 4000);
+          window.print();
+        });
+      });
+    }).catch(() => {
+      cleanupPrintDom();
+      setPrintStatus('⚠️ 打印内容准备失败，请重试');
+      setTimeout(() => setPrintStatusVisible(false), 4000);
+    });
   }, [invoices, settings]);
 
   return (

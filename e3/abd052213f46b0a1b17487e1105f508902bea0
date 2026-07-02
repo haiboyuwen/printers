@@ -1,0 +1,23 @@
+src/App.tsx
+  s_393d5178b1b278::t_559277979845d9 593
+  s_393d5178b1b278::t_6bdb74dc4dd552 408-415,474,477-492,517-521,535-592,596
+dist/index.html
+  s_393d5178b1b278::t_f3ec3efe9f6ac6 9,12,15,17-19,21,24-26,28-30,32-47,49-50,53,67-74,76-130
+  s_393d5178b1b278::t_c26dd70f15960b 7,14,16,27,54,131-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "e3abd052213f46b0a1b17487e1105f508902bea0",
+  "prompts": {},
+  "sessions": {
+    "s_393d5178b1b278": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f20ab-0052-7591-9298-e7016e381178",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yuhaibo <haiboyuwen@gmail.com>"
+    }
+  }
+}
